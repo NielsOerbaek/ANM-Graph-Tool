@@ -1,0 +1,5 @@
+config.py
+*.pyc
+static/graphs
+dump
+*.log

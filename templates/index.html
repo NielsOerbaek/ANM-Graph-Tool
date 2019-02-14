@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SSE Data Tool</title>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+  <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet">
+
+  <style>
+    body {
+    	font-family: 'Cabin';
+    	max-width: 600px;
+    	margin: 0 auto;
+    }
+    select#zones {
+    	display: block;
+    	width: 180px;
+    	height: 180px;
+    }
+    button#submit-btn {
+    	width: 200px;
+    	display: block;
+    	margin: 50px auto;
+    	font-size: 16px;
+    }
+  </style>
+
+</head>
+<body>
+		<h1>SSE-data Graph Tool</h1>
+		<p>
+  		This little tool lets you generate graphs with data gathered from the SSE website for the ANM system in Orkney.
+      This data-gathering started on the 30th of November 2018.
+    </p>
+    <p>
+      The demand and generation is for the entire Orkney grid, and is scraped from this website: <a href="https://www.ssen.co.uk/ANM/">https://www.ssen.co.uk/ANM/</a>.
+      The curtailment data is for each individual zone in the ANM grid, and is scraped from this website: <a href="https://www.ssen.co.uk/ANMGeneration/">https://www.ssen.co.uk/ANMGeneration/</a>.
+    </p>
+		<h4>Pick dates:</h4>
+		<input type="text" name="datetimes" id="dates" />
+		<h4>Pick graph type:</h4>
+		<select name="Pick graph type" id="graph-type">
+			<option value="deltaZone">Generation relative to Demand, and curtailment per zone</option>
+			<option value="graph">Demand, Generation, and accumulated curtailment</option>
+			<option value="delta">Generation relative to Demand, and accumulated curtailment</option>
+			<option value="wind">Generation and Wind speeds</option>
+		</select>
+		<h4>Pick zones:<br/>
+		<small>Hold CTRL or CMD down to select more that one. Leave empty for all zones.</small>
+		</h4>
+		<select id="zones" multiple>
+				<option value="Core Zone">Core Zone</option>
+				<option value="Zone 1">Zone 1</option>
+				<option value="Zone 1A">Zone 1A</option>
+				<option value="Zone 2">Zone 2</option>
+				<option value="Zone 2A">Zone 2A</option>
+				<option value="Zone 2B">Zone 2B</option>
+				<option value="Zone 3">Zone 3</option>
+				<option value="Zone 4">Zone 4</option>
+				<option value="Zone 4A">Zone 4A</option>
+		</select>
+		<button id="submit-btn">Generate Graph!</button>
+		<hr>
+		<h3>Map of the ANM zones:</h3>
+		<img src="https://www.ssen.co.uk/uploadedImages/SSEPD/SSEN/Content/ANM/Anm-OrkneyNetworkMap.jpg"/>
+
+<script>
+$(function() {
+    $('#dates').daterangepicker();
+    $("#graph-type").change(() => {
+      if($(this).find(":selected").val() == "wind") {
+        $("#zones option").prop("selected", false);
+        $("#zones").prop("disabled", "disabled");
+      } else {
+        $("#zones").prop("disabled", false);
+      }
+    });
+    $("#submit-btn").click(() => {
+      if($('#dates').data('daterangepicker').startDate > moment.now()) {
+        alert("We cannot graph the future. Place pick some dates in the past.");
+        return;
+      }
+      var start = $('#dates').data('daterangepicker').startDate.format("YYYY-MM-DD");
+      var end = $('#dates').data('daterangepicker').endDate.add(1, 'days').format("YYYY-MM-DD");
+      var graphType = $("#graph-type").val();
+      var zones = $("#zones").val().join(",");
+      var path = zones == "" ? [graphType, start, end] : [graphType, start, end, zones];
+      window.location.href = path.join("/");
+    });
+});
+</script>
+</body>
+</html>
