@@ -181,12 +181,12 @@ def buildWeatherGraph(start_limit=0, stop_limit=0, zones=0):
     ax1.set_xlabel("Time")
     ax1.margins(x=0)
     ax1.set_ylabel("MegaWatt")
-    ax1.legend(["Generation"], loc=1)
+    ax1.legend(["Generation"], loc=2)
 
     ax2 = ax1.twinx()
     ax2.plot(w_df.index, w_df["speed"],"b--", linewidth=1, alpha=0.8)
     ax2.set_ylabel("Windspeed")
-    ax2.legend(["Windspeed in $M/S$"], loc=2)
+    ax2.legend(["Windspeed in $M/S$"], loc=1)
 
     fig.autofmt_xdate()
     fig.set_size_inches(15, 8)
