@@ -118,6 +118,10 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d').timestamp()
     if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d').timestamp()
 
+    if stop_limit - start_limit > 172800: tick_zoom = 6
+    elif stop_limit - start_limit > 86400: tick_zoom = 3
+    else: tick_zoom = 1
+
     df = getData.getDataFrame(start_limit, stop_limit)
 
     if zones != 0: zone_names = zones
@@ -128,32 +132,34 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
         for j, status in enumerate(df[zone+": Curtailed"] + df[zone+": Full Stop"]):
             curtailments[i,j] = status
 
+    curtailments = curtailments[:,:-1]
+
     # Generate x ticks for the mesh plot
     meshxticks_major = []
     meshxticks_minor = []
     for i,d in enumerate(df.index):
         if d.hour == 0 and d.minute == 0: meshxticks_major.append(i)
-        elif d.hour % 6 == 0 and d.minute == 0: meshxticks_minor.append(i)
+        elif d.hour % tick_zoom == 0 and d.minute == 0: meshxticks_minor.append(i)
 
 
     fig = plt.figure()
     # Bottom plot
-    ax1 = fig.add_axes([0.08,0.1,0.9,0.4])
+    ax1 = fig.add_axes([0.08,0.1,0.9,0.39])
     delta = (df["Generation"]-df["Demand"])#.rolling(3).mean()
     ax1.plot(df.index, delta,"k-", linewidth=1, alpha=0.8)
     plt.fill_between(df.index, delta, color="k", alpha=0.3)
     ax1.set_xlabel("Time")
     ax1.margins(x=0)
     ax1.set_ylabel("MegaWatt")
-    ax1.set_ylim(-30, 30)
+    ax1.set_ylim(-25, 25)
+    ax1.set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
     ax1.grid(b=True, which="both", axis="y")
     ax1.xaxis.set_major_locator(mdates.DayLocator())
-    ax1.xaxis.set_minor_locator(mdates.HourLocator(interval=6))
+    ax1.xaxis.set_minor_locator(mdates.HourLocator(interval=tick_zoom))
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-    ax1.xaxis.set_minor_formatter(mdates.DateFormatter("%H:%m"))
+    ax1.xaxis.set_minor_formatter(mdates.DateFormatter("%H:00"))
     for i,t in enumerate(ax1.xaxis.get_minor_ticks()):
-        if i % 4 == 0:
-            t.label.set_visible(False)
+        if i % (24 / tick_zoom) == 0: t.label.set_visible(False)
     ax1.tick_params(axis="x", which="minor")
     ax1.grid(b=True, which="major", axis="x", linestyle="-.")
     ax1.grid(b=True, which="minor", axis="x", linestyle="--")
@@ -161,7 +167,7 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
 
     # Top plot
     cm = plt.get_cmap("OrRd")
-    ax2 = fig.add_axes([0.08,0.5,0.9,0.4])
+    ax2 = fig.add_axes([0.08,0.51,0.9,0.4])
     ax2.pcolormesh(curtailments, alpha=1, cmap=cm, snap=True)
     ax2.set_xticks(meshxticks_major)
     ax2.set_xticks(meshxticks_minor, minor=True)
