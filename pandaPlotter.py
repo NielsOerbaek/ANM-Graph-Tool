@@ -122,48 +122,71 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
 
     if zones != 0: zone_names = zones
 
+    # Generate x,y data for the mesh plot
     curtailments = np.zeros(shape=(len(zone_names),len(df.index)))
-
     for i, zone in enumerate(zone_names):
         for j, status in enumerate(df[zone+": Curtailed"] + df[zone+": Full Stop"]):
             curtailments[i,j] = status
 
+    # Generate x ticks for the mesh plot
+    meshxticks_major = []
+    meshxticks_minor = []
+    for i,d in enumerate(df.index):
+        if d.hour == 0 and d.minute == 0: meshxticks_major.append(i)
+        elif d.hour % 6 == 0 and d.minute == 0: meshxticks_minor.append(i)
 
-    fig, ax1 = plt.subplots()
+
+    fig = plt.figure()
+    # Bottom plot
+    ax1 = fig.add_axes([0.08,0.1,0.9,0.4])
     delta = (df["Generation"]-df["Demand"])#.rolling(3).mean()
     ax1.plot(df.index, delta,"k-", linewidth=1, alpha=0.8)
     plt.fill_between(df.index, delta, color="k", alpha=0.3)
     ax1.set_xlabel("Time")
     ax1.margins(x=0)
     ax1.set_ylabel("MegaWatt")
-    ax1.yaxis.tick_right()
-    ax1.yaxis.set_label_position("right")
     ax1.set_ylim(-30, 30)
-    ax1.legend(["Generation relative to Demand"], loc=1)
-    ax1.set_zorder(10)
-    ax1.patch.set_visible(False)
+    ax1.grid(b=True, which="both", axis="y")
+    ax1.xaxis.set_major_locator(mdates.DayLocator())
+    ax1.xaxis.set_minor_locator(mdates.HourLocator(interval=6))
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+    ax1.xaxis.set_minor_formatter(mdates.DateFormatter("%H:%m"))
+    for i,t in enumerate(ax1.xaxis.get_minor_ticks()):
+        if i % 4 == 0:
+            t.label.set_visible(False)
+    ax1.tick_params(axis="x", which="minor")
+    ax1.grid(b=True, which="major", axis="x", linestyle="-.")
+    ax1.grid(b=True, which="minor", axis="x", linestyle="--")
+    ax1.legend(["Generation relative to Demand"], loc=1, fancybox=True, framealpha=0.5)
 
+    # Top plot
     cm = plt.get_cmap("OrRd")
-
-    ax2 = fig.add_subplot(111)
+    ax2 = fig.add_axes([0.08,0.5,0.9,0.4])
     ax2.pcolormesh(curtailments, alpha=1, cmap=cm, snap=True)
+    ax2.set_xticks(meshxticks_major)
+    ax2.set_xticks(meshxticks_minor, minor=True)
+    ax2.xaxis.set_ticklabels([])
+    ax2.grid(b=True, which="major", axis="x", linestyle="-.")
+    ax2.grid(b=True, which="minor", axis="x", linestyle="--")
     ax2.set_ylabel("Zones")
-    ax2.set_xticks([])
     ax2.set_yticks(np.arange(len(zone_names))+0.5)
     ax2.set_yticks(np.arange(len(zone_names)), minor=True)
     ax2.set_yticklabels(zone_names, rotation=0, fontsize="10", va="center")
     ax2.grid(b=True, which="minor", axis="y")
-
     custom_lines = [Line2D([0], [0], color=cm(0), lw=4),
-                    Line2D([0], [0], color=cm(.5), lw=4),
-                    Line2D([0], [0], color=cm(1.), lw=4)]
-    ax2.legend(custom_lines, ["No curtailment in zone","Partial curtailment in zone", "Full stop in zone"], loc=2)
-
-    fig.autofmt_xdate()
-    fig.set_size_inches(15, 8)
-    plt.xticks(rotation=-45)
+    Line2D([0], [0], color=cm(.5), lw=4),
+    Line2D([0], [0], color=cm(1.), lw=4)]
+    ax2.legend(custom_lines, ["No curtailment in zone","Partial curtailment in zone", "Full stop in zone"], loc=1, fancybox=True, framealpha=0.5)
     plt.title("Demand, Generation for all of Orkney. \nCurtailments in " + ", ".join(zone_names))
+
+    fig.autofmt_xdate(which="both")
+
+    fig.set_size_inches(15, 8)
+    plt.xticks(rotation=-60)
+
     plt.savefig("./static/graphs/"+file_name, orientation='landscape')
+    #plt.savefig("./static/pgf/"+file_name[:-3]+"pgf", orientation='landscape')
+    #plt.show()
 
     return file_name
 

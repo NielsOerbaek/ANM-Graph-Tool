@@ -6,7 +6,7 @@ import config
 
 zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
 
-client = pymongo.MongoClient("mongodb://"+config.reader_user+":"+config.reader_pw+"@localhost/sse-data")
+client = pymongo.MongoClient("mongodb://"+config.reader_user+":"+config.reader_pw+"@"+config.SERVER+"/sse-data")
 db = client["sse-data"]
 status = db["ANM_status"]
 
