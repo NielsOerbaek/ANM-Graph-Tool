@@ -5,13 +5,15 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import pandas as pd
 import getData
 from datetime import datetime
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 from matplotlib.lines import Line2D
+
+from math import ceil
 
 
 def makeFileName(start_limit=0, stop_limit=0, zones=0):
@@ -118,11 +120,14 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d').timestamp()
     if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d').timestamp()
 
-    if stop_limit - start_limit > 172800: tick_zoom = 6
+    # Adjust the amount of ticks to the data size
+    if stop_limit - start_limit > 86400*8: tick_zoom = 24
+    elif stop_limit - start_limit > 86400*4: tick_zoom = 12
+    elif stop_limit - start_limit > 86400*2: tick_zoom = 6
     elif stop_limit - start_limit > 86400: tick_zoom = 3
     else: tick_zoom = 1
 
-    df = getData.getDataFrame(start_limit, stop_limit)
+    df = getData.getDataFrame(start_limit, stop_limit).resample("1min").mean().interpolate(method='linear')
 
     if zones != 0: zone_names = zones
 
@@ -130,7 +135,7 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     curtailments = np.zeros(shape=(len(zone_names),len(df.index)))
     for i, zone in enumerate(zone_names):
         for j, status in enumerate(df[zone+": Curtailed"] + df[zone+": Full Stop"]):
-            curtailments[i,j] = status
+            curtailments[i,j] = ceil(status)
 
     curtailments = curtailments[:,:-1]
 
@@ -155,11 +160,12 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     ax1.set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
     ax1.grid(b=True, which="both", axis="y")
     ax1.xaxis.set_major_locator(mdates.DayLocator())
-    ax1.xaxis.set_minor_locator(mdates.HourLocator(interval=tick_zoom))
+    ax1.xaxis.set_minor_locator(mdates.HourLocator())
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
     ax1.xaxis.set_minor_formatter(mdates.DateFormatter("%H:00"))
     for i,t in enumerate(ax1.xaxis.get_minor_ticks()):
-        if i % (24 / tick_zoom) == 0: t.label.set_visible(False)
+        if i % 24 == 0: t.label.set_visible(False)
+        if i % tick_zoom != 0: t.set_visible(False)
     ax1.tick_params(axis="x", which="minor")
     ax1.grid(b=True, which="major", axis="x", linestyle="-.")
     ax1.grid(b=True, which="minor", axis="x", linestyle="--")
@@ -180,8 +186,8 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     ax2.set_yticklabels(zone_names, rotation=0, fontsize="10", va="center")
     ax2.grid(b=True, which="minor", axis="y")
     custom_lines = [Line2D([0], [0], color=cm(0), lw=4),
-    Line2D([0], [0], color=cm(.5), lw=4),
-    Line2D([0], [0], color=cm(1.), lw=4)]
+        Line2D([0], [0], color=cm(.5), lw=4),
+        Line2D([0], [0], color=cm(1.), lw=4)]
     ax2.legend(custom_lines, ["No curtailment in zone","Partial curtailment in zone", "Full stop in zone"], loc=1, fancybox=True, framealpha=0.5)
     plt.title("Demand, Generation for all of Orkney. \nCurtailments in " + ", ".join(zone_names))
 
