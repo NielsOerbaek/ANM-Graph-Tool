@@ -198,7 +198,7 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     fig.set_size_inches(15, 8)
     plt.xticks(rotation=-60)
 
-    plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
+    plt.savefig("./static/graphs/"+file_name, orientation='landscape')
     #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
     #plt.show()
     plt.clf()
@@ -264,14 +264,15 @@ def buildWeatherCorrGraph(start_limit=0, stop_limit=0, zones=0):
     plt.xticks(rotation=45)
     plt.title("Windspeeds near Eday")
     plt.savefig("./static/graphs/"+file_name, orientation='landscape')
-    plt.show()
+    #plt.show()
+    plt.clf()
 
     return file_name
 
 def buildNonANMGraph(start_limit=0, stop_limit=0, zones=0):
     zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
 
-    file_name = "delta-zone-" + makeFileName(start_limit, stop_limit, zones)
+    file_name = "firm-not-firm-" + makeFileName(start_limit, stop_limit, zones)
 
     if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d').timestamp()
     if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d').timestamp()
@@ -351,8 +352,8 @@ def buildNonANMGraph(start_limit=0, stop_limit=0, zones=0):
     fig.set_size_inches(15, 8)
     plt.xticks(rotation=-60)
 
-    #plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
+    plt.savefig("./static/graphs/"+file_name, orientation='landscape')
+    plt.clf()
     #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
-    plt.show()
 
     return file_name
