@@ -1,11 +1,13 @@
 from flask import Flask, render_template, request, url_for
 import os
 import pandaPlotter
+import gc
 
 app = Flask(__name__)
 
 def displayGraph(file_name):
     full_filename = os.path.join(os.path.sep, 'static', 'graphs', file_name)
+    gc.collect()
     return render_template("graph.html", graph_image = full_filename)
 
 

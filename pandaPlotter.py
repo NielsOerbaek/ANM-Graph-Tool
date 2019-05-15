@@ -64,6 +64,7 @@ def buildGraph(start_limit=0, stop_limit=0, zones=0):
     plt.xticks(rotation=-45)
     plt.title("Demand, Generation for all of Orkney. Curtailments in " + ", ".join(zone_names))
     plt.savefig("./static/graphs/"+file_name, orientation='landscape')
+    plt.clf()
 
     return file_name
 
@@ -109,6 +110,7 @@ def buildDeltaGraph(start_limit=0, stop_limit=0, zones=0):
     plt.xticks(rotation=-45)
     plt.title("Demand, Generation for all of Orkney. Curtailments in " + ", ".join(zone_names))
     plt.savefig("./static/graphs/"+file_name, orientation='landscape')
+    plt.clf()
 
     return file_name
 
@@ -199,6 +201,7 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     plt.savefig("./static/graphs/"+file_name, orientation='landscape')
     #plt.savefig("./static/pgf/"+file_name[:-3]+"pgf", orientation='landscape')
     #plt.show()
+    plt.clf()
 
     return file_name
 
@@ -228,5 +231,6 @@ def buildWeatherGraph(start_limit=0, stop_limit=0, zones=0):
     plt.xticks(rotation=45)
     plt.title("Windspeeds near Eday")
     plt.savefig("./static/graphs/"+file_name, orientation='landscape')
+    plt.clf()
 
     return file_name
