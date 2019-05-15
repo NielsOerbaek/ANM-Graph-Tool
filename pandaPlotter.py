@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timezone, timedelta
@@ -196,8 +196,8 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0):
     fig.set_size_inches(15, 8)
     plt.xticks(rotation=-60)
 
-    plt.savefig("./static/graphs/"+file_name, orientation='landscape')
-    #plt.savefig("./static/pgf/"+file_name[:-3]+"pgf", orientation='landscape')
+    plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
+    #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
     #plt.show()
 
     return file_name
@@ -228,5 +228,127 @@ def buildWeatherGraph(start_limit=0, stop_limit=0, zones=0):
     plt.xticks(rotation=45)
     plt.title("Windspeeds near Eday")
     plt.savefig("./static/graphs/"+file_name, orientation='landscape')
+
+    return file_name
+
+def buildWeatherCorrGraph(start_limit=0, stop_limit=0, zones=0):
+    file_name = "weather-" + makeFileName(start_limit, stop_limit, zones)
+
+    if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d').timestamp()
+    if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d').timestamp()
+
+    sse_df = getData.getDataFrame(start_limit, stop_limit)
+    w_df = getData.getWeatherDataFrame(start_limit, stop_limit)
+    est_gen = w_df["speed"].apply(np.poly1d([-0.0262,0.3693,2.09,-1.626]))
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(sse_df.index, sse_df["Generation"],"k--", linewidth=1, alpha=0.8)
+    ax1.set_xlabel("Time")
+    ax1.margins(x=0)
+    ax1.set_ylabel("MegaWatt")
+    ax1.plot(w_df.index, est_gen,"g-", linewidth=1, alpha=0.8)
+    #plt.fill_between(w_df.index, sse_df.loc[w_df.index,"Generation"], est_gen, color="k", alpha=0.3)
+    ax1.legend(["Generation", "Estimated Generation"], loc=2)
+
+    #ax2 = ax1.twinx()
+    #ax2.plot(w_df.index, w_df["speed"],"b--", linewidth=1, alpha=0.8)
+    #ax2.set_ylabel("Windspeed")
+    #ax2.legend(["Windspeed in $M/S$"], loc=1)
+
+    fig.autofmt_xdate()
+    fig.set_size_inches(15, 8)
+    plt.xticks(rotation=45)
+    plt.title("Windspeeds near Eday")
+    plt.savefig("./static/graphs/"+file_name, orientation='landscape')
+    plt.show()
+
+    return file_name
+
+def buildNonANMGraph(start_limit=0, stop_limit=0, zones=0):
+    zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
+
+    file_name = "delta-zone-" + makeFileName(start_limit, stop_limit, zones)
+
+    if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d').timestamp()
+    if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d').timestamp()
+
+    # Adjust the amount of ticks to the data size
+    if stop_limit - start_limit > 86400*8: tick_zoom = 24
+    elif stop_limit - start_limit > 86400*4: tick_zoom = 12
+    elif stop_limit - start_limit > 86400*2: tick_zoom = 6
+    elif stop_limit - start_limit > 86400: tick_zoom = 3
+    else: tick_zoom = 1
+
+    df = getData.getDataFrame(start_limit, stop_limit).resample("1min").mean().interpolate(method='linear')
+    w_df = getData.getWeatherDataFrame(start_limit, stop_limit).resample("1min").mean().interpolate(method='linear')
+
+    if zones != 0: zone_names = zones
+
+    # Generate x,y data for the mesh plot
+    curtailments = np.zeros(shape=(len(zone_names),len(df.index)))
+    for i, zone in enumerate(zone_names):
+        for j, status in enumerate(df[zone+": Curtailed"] + df[zone+": Full Stop"]):
+            curtailments[i,j] = ceil(status)
+
+    curtailments = curtailments[:,:-1]
+
+    # Generate x ticks for the mesh plot
+    meshxticks_major = []
+    meshxticks_minor = []
+    for i,d in enumerate(df.index):
+        if d.hour == 0 and d.minute == 0: meshxticks_major.append(i)
+        elif d.hour % tick_zoom == 0 and d.minute == 0: meshxticks_minor.append(i)
+
+
+    fig = plt.figure()
+    # Bottom plot
+    ax1 = fig.add_axes([0.08,0.1,0.9,0.39])
+    delta = (df["Generation"]-df["Demand"])#.rolling(3).mean()
+    ax1.plot(df.index, df["ANM Generation"],"k-", linewidth=1, alpha=0.8)
+    ax1.plot(df.index, df["Non-ANM Generation"],"b--", linewidth=1, alpha=0.8)
+    ax1.plot(w_df.index, w_df["speed"],"g--", linewidth=1, alpha=0.8)
+    ax1.set_xlabel("Time")
+    ax1.margins(x=0)
+    ax1.grid(b=True, which="both", axis="y")
+    ax1.xaxis.set_major_locator(mdates.DayLocator())
+    ax1.xaxis.set_minor_locator(mdates.HourLocator())
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+    ax1.xaxis.set_minor_formatter(mdates.DateFormatter("%H:00"))
+    for i,t in enumerate(ax1.xaxis.get_minor_ticks()):
+        if i % 24 == 0: t.label.set_visible(False)
+        if i % tick_zoom != 0: t.set_visible(False)
+    ax1.tick_params(axis="x", which="minor")
+    ax1.grid(b=True, which="major", axis="x", linestyle="-.")
+    ax1.grid(b=True, which="minor", axis="x", linestyle="--")
+    ax1.legend(["ANM Generation [MW]","Non-ANM Generation [MW]", "Wind speed [m/s]"], loc=1, framealpha=0.7)
+
+    # Top plot
+    cm = plt.get_cmap("OrRd")
+    ax2 = fig.add_axes([0.08,0.51,0.9,0.4])
+    ax2.pcolormesh(curtailments, alpha=1, cmap=cm, snap=True)
+    ax2.set_xticks(meshxticks_major)
+    ax2.set_xticks(meshxticks_minor, minor=True)
+    ax2.xaxis.set_ticklabels([])
+    ax2.grid(b=True, which="major", axis="x", linestyle="-.")
+    ax2.grid(b=True, which="minor", axis="x", linestyle="--")
+    ax2.set_ylabel("Zones")
+    ax2.set_yticks(np.arange(len(zone_names))+0.5)
+    ax2.set_yticks(np.arange(len(zone_names)), minor=True)
+    ax2.set_yticklabels(zone_names, rotation=0, fontsize="10", va="center")
+    ax2.grid(b=True, which="minor", axis="y")
+    custom_lines = [Line2D([0], [0], color=cm(0), lw=4),
+        Line2D([0], [0], color=cm(.5), lw=4),
+        Line2D([0], [0], color=cm(1.), lw=4)]
+    ax2.legend(custom_lines, ["No curtailment in zone","Partial curtailment in zone", "Full stop in zone"], loc=1, fancybox=True, framealpha=0.5)
+    plt.title("Generation for all of Orkney. \nCurtailments in " + ", ".join(zone_names))
+
+    fig.autofmt_xdate(which="both")
+
+    fig.set_size_inches(15, 8)
+    plt.xticks(rotation=-60)
+
+    #plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
+    #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
+    plt.show()
 
     return file_name
