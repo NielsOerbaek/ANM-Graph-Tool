@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, url_for
 import os
 import pandaPlotter
+import getData
 import gc
 
 app = Flask(__name__)
@@ -64,3 +65,10 @@ def get_deltaZone_by_start(start):
 def get_wind_by_start_end(start,end):
     file = pandaPlotter.buildWeatherGraph(start,end)
     return displayGraph(file)
+
+@app.route('/json/<start>/<end>')
+def get_json_by_start_end(start,end):
+    start = datetime.strptime(start, '%Y-%m-%d').timestamp()
+    stop = datetime.strptime(stop, '%Y-%m-%d').timestamp()
+    df = getData.getDataFrame(start,end)
+    return df.to_json()
