@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request, url_for, jsonify
 import os
 import pandaPlotter
 import getData
 import gc
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -69,6 +70,8 @@ def get_wind_by_start_end(start,end):
 @app.route('/json/<start>/<end>')
 def get_json_by_start_end(start,end):
     start = datetime.strptime(start, '%Y-%m-%d').timestamp()
-    stop = datetime.strptime(stop, '%Y-%m-%d').timestamp()
+    end = datetime.strptime(end, '%Y-%m-%d').timestamp()
     df = getData.getDataFrame(start,end)
-    return df.to_json()
+    response = jsonify(df.to_json(date_format="iso",orient="split"))
+    del df
+    return response
