@@ -35,10 +35,15 @@ def getDataFrame(start=0, end=0):
     for s in demand.find({"timestamp": {"$gt": start-1, "$lt": end}}):
         d = getDate(s).replace(microsecond=0,second=0)
         if d in data_dict.keys() and len(data_dict[d]) < 20:
-            data_dict[d]["Demand"] = s["data"][0]["data"][0]
-            data_dict[d]["Generation"] = s["data"][2]["data"][1]+s["data"][3]["data"][1]
-            data_dict[d]["ANM Generation"] = s["data"][2]["data"][1]
-            data_dict[d]["Non-ANM Generation"] = s["data"][3]["data"][1]
+            try:
+                data_dict[d]["Demand"] = s["data"][0]["data"][0]
+                data_dict[d]["Generation"] = s["data"][2]["data"][1]+s["data"][3]["data"][1]
+                data_dict[d]["ANM Generation"] = s["data"][2]["data"][1]
+                data_dict[d]["Non-ANM Generation"] = s["data"][3]["data"][1]
+            except:
+                print("Error in data sample:")
+                print(s)
+                pass
 
     df = pd.DataFrame.from_dict(data_dict, orient="index")
 
